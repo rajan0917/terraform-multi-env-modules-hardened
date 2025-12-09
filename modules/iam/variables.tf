@@ -8,6 +8,7 @@ variable "assume_services" {
 variable "attach_policy_arns" {
   type    = list(string)
   default = []
+  description = "List of managed policy ARNs to attach to the role."
 }
 variable "inline_policy_json" {
   type    = string

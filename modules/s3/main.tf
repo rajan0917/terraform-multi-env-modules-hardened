@@ -16,15 +16,6 @@ resource "aws_s3_bucket" "this" {
   force_destroy = var.force_destroy
   tags          = var.tags
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm     = "aws:kms"
-        kms_master_key_id = aws_kms_key.this.arn
-      }
-    }
-  }
-
   versioning {
     enabled = var.versioning
   }
@@ -38,32 +29,50 @@ resource "aws_s3_bucket" "this" {
     }
   }
 
-  logging {
-    target_bucket = var.access_log_bucket != "" ? var.access_log_bucket : null
-    target_prefix = var.access_log_prefix
+#  logging {
+#    # if access log bucket is not created in this module, user may supply an external bucket name via var.access_log_bucket
+#    target_bucket = var.access_log_bucket != "" ? var.access_log_bucket : null
+#    target_prefix = var.access_log_prefix
+#  }
+}
+
+# New recommended resource for S3 SSE configuration
+resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
+  bucket = aws_s3_bucket.this.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.this.arn
+    }
   }
 }
 
+# Optional access log bucket (encrypted) if user asked to create it
 resource "aws_s3_bucket" "access_logs" {
   count  = var.create_access_log_bucket ? 1 : 0
   bucket = var.access_log_bucket_name != "" ? var.access_log_bucket_name : "${var.bucket_name}-access-logs"
   acl    = "log-delivery-write"
   tags   = var.tags
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm     = "aws:kms"
-        kms_master_key_id = aws_kms_key.this.arn
-      }
-    }
-  }
-
   versioning {
     enabled = false
   }
 }
 
+resource "aws_s3_bucket_server_side_encryption_configuration" "access_logs" {
+  count  = var.create_access_log_bucket ? 1 : 0
+  bucket = element(aws_s3_bucket.access_logs.*.id, 0)
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.this.arn
+    }
+  }
+}
+
+# Optional bucket policy to enforce TLS and SSE-KMS (applied only when enabled)
 resource "aws_s3_bucket_policy" "secure" {
   count  = var.enforce_tls_and_encryption ? 1 : 0
   bucket = aws_s3_bucket.this.id

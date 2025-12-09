@@ -22,11 +22,14 @@ resource "aws_subnet" "private" {
   tags              = { Name = "${var.name}-private-${count.index}" }
 }
 resource "aws_nat_gateway" "this" {
-  count         = var.create_nat
+ # count         = var.create_nat
+  count         = var.create_nat ? length(aws_subnet.public) : 0
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
 }
 resource "aws_eip" "nat" {
-  count = var.create_nat
-  vpc   = true
+#  count = var.create_nat
+#  vpc   = true
+  count  = 3
+  domain   = "vpc"
 }

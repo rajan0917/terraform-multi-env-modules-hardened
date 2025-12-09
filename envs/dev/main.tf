@@ -31,14 +31,16 @@ module "rds" {
   identifier    = "dev-db"
   username      = "dbadmin"
   password      = "CHANGE_ME"
-  subnet_ids    = []
+#  subnet_ids    = []
+  subnet_ids    = ["subnet-aaa","subnet-bbb"]
   alarm_actions = [module.notifications.sns_topic_arn]
   tags          = var.tags
 }
 module "eks" {
   source            = "../../modules/eks"
   cluster_name      = "dev-eks"
-  subnet_ids        = []
+#  subnet_ids        = []
+  subnet_ids        = ["subnet-aaa","subnet-bbb"]
   create_node_group = true
   tags              = var.tags
 }

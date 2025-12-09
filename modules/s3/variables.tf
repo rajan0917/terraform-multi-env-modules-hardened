@@ -25,7 +25,15 @@ variable "lifecycle_days" {
   type    = number
   default = 365
 }
+variable "create_access_log_bucket" {
+  type    = bool
+  default = false
+}
 variable "access_log_bucket" {
+  type    = string
+  default = ""
+}
+variable "access_log_bucket_name" {
   type    = string
   default = ""
 }

@@ -38,10 +38,11 @@ resource "aws_iam_role_policy_attachment" "attach_scoped" {
   role       = aws_iam_role.this.name
   policy_arn = aws_iam_policy.scoped.arn
 }
-
 resource "aws_iam_role_policy_attachment" "managed" {
-  for_each   = var.attach_policy_arns != null ? toset(var.attach_policy_arns) : {}
+  for_each   = toset(var.attach_policy_arns)
+
   role       = aws_iam_role.this.name
   policy_arn = each.value
 }
+
 
