@@ -1,0 +1,3 @@
+name = "app-nlb"
+subnets = ["subnet-aaa","subnet-bbb"]
+vpc_id = "vpc-123456"

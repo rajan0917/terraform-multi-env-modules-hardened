@@ -1,0 +1,4 @@
+zone_name = "example.com"
+www_record = true
+www_records = ["1.2.3.4"]
+tags = { Environment = "prod" }

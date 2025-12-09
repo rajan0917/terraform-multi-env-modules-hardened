@@ -1,0 +1,7 @@
+identifier = "prod-db"
+username = "dbadmin"
+password = "CHANGEME"
+subnet_ids = ["subnet-priv-1","subnet-priv-2"]
+multi_az = true
+alarm_actions = []
+tags = { Environment = "prod" }

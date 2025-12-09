@@ -1,0 +1,4 @@
+name = "example-role"
+assume_services = ["ec2.amazonaws.com"]
+example_s3_bucket_arn = "arn:aws:s3:::my-app-bucket-prod"
+attach_policy_arns = ["arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"]

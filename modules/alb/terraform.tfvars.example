@@ -1,0 +1,7 @@
+name = "app-alb"
+subnets = ["subnet-aaa","subnet-bbb"]
+vpc_id = "vpc-123456"
+enable_access_logs = true
+access_log_bucket = "my-app-logs"
+alarm_actions = []
+tags = { Environment = "prod" }

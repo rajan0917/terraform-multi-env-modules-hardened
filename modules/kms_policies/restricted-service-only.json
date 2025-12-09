@@ -1,0 +1,19 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowSpecificServiceAndRole",
+      "Effect": "Allow",
+      "Principal": { "Service": ["logs.us-east-1.amazonaws.com"] },
+      "Action": ["kms:Encrypt","kms:GenerateDataKey*","kms:Decrypt"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowAdminsFullAccess",
+      "Effect": "Allow",
+      "Principal": { "AWS": ["arn:aws:iam::123456789012:role/PlatformAdmin"] },
+      "Action": "kms:*",
+      "Resource": "*"
+    }
+  ]
+}

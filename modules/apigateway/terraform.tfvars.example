@@ -1,0 +1,3 @@
+name = "my-app-api"
+description = "API for my app"
+authorization = "NONE"

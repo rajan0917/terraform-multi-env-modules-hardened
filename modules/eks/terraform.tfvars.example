@@ -1,0 +1,5 @@
+cluster_name = "prod-eks"
+subnet_ids = ["subnet-aaa","subnet-bbb","subnet-ccc"]
+create_node_group = true
+log_retention_days = 90
+tags = { Environment = "prod" }
