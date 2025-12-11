@@ -1,0 +1,266 @@
+# Builds a multi-platform Docker image with Buildx
+
+# Pushes the image to ECR with a commit-sha tag (and latest tag)
+
+# Updates kubeconfig (via aws eks update-kubeconfig) and deploys to EKS using either:
+
+# kubectl set image against a deployment (fast), or
+
+# kubectl apply -f <manifest> (if you commit manifests and want to apply them)
+
+# Runs Terraform init / plan and optionally apply (controlled by input)
+
+name: Reusable ECR/EKS + Terraform deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Environment name (dev/stage/qa/production)"
+        required: true
+        type: string
+
+      aws_account_id:
+        description: "AWS account id used for ECR URI"
+        required: true
+        type: string
+
+      aws_region:
+        description: "AWS region"
+        required: true
+        type: string
+        default: "ap-south-1"
+
+      ecr_repository:
+        description: "ECR repository name (must exist)"
+        required: true
+        type: string
+
+      image_name:
+        description: "Image name (used locally as repo/image) — optional; if empty uses repo name"
+        required: false
+        type: string
+        default: ""
+
+      k8s_deployment:
+        description: "Kubernetes deployment name to update (optional). If provided, 'kubectl set image' will be used."
+        required: false
+        type: string
+        default: ""
+
+      k8s_container_name:
+        description: "Container name inside the k8s deployment (required if k8s_deployment provided)."
+        required: false
+        type: string
+        default: ""
+
+      k8s_manifest_path:
+        description: "Path to k8s manifests to apply (optional). If provided, 'kubectl apply -f' will be executed."
+        required: false
+        type: string
+        default: ""
+
+      terraform_backend_key:
+        description: "Terraform backend key/path for this environment (e.g. terraform/state/dev/terraform.tfstate)"
+        required: false
+        type: string
+        default: ""
+
+      terraform_apply:
+        description: "Whether to auto-apply Terraform plan"
+        required: false
+        type: boolean
+        default: false
+
+      docker_build_context:
+        description: "Docker build context (folder)."
+        required: false
+        type: string
+        default: "."
+
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      # Optional: you can pass TF_VAR_... or other environment-scoped secrets from calling workflow
+
+jobs:
+  build-and-push:
+    name: Build & push image to ECR
+    runs-on: ubuntu-latest
+    outputs:
+      image_uri: ${{ steps.set-output.outputs.image_uri }}
+      image_tag: ${{ steps.set-output.outputs.image_tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Determine image names & tags
+        id: set-output
+        run: |
+          # image tag = short SHA (7 chars)
+          IMAGE_TAG=${GITHUB_SHA::7}
+          if [ -z "${{ inputs.image_name }}" ] || [ "${{ inputs.image_name }}" = "" ]; then
+            IMAGE_NAME=${{ inputs.ecr_repository }}
+          else
+            IMAGE_NAME=${{ inputs.image_name }}
+          fi
+          ECR_URI="${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${IMAGE_NAME}"
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "image_uri=${ECR_URI}" >> $GITHUB_OUTPUT
+
+      - name: Build and push image (multi-platform)
+        id: build
+        run: |
+          IMAGE_TAG=${{ steps.set-output.outputs.image_tag }}
+          ECR_URI=${{ steps.set-output.outputs.image_uri }}
+          CONTEXT=${{ inputs.docker_build_context }}
+          # Build and push both the commit-tag and latest
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag "${ECR_URI}:${IMAGE_TAG}" \
+            --tag "${ECR_URI}:latest" \
+            --push \
+            "${CONTEXT}"
+
+  configure-kube:
+    name: Configure kubeconfig for EKS
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    outputs:
+      kubeconfig-path: /tmp/kubeconfig
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Update kubeconfig for the EKS cluster
+        run: |
+          # requires that the user passes the cluster name via environment var or input
+          aws eks update-kubeconfig --region ${{ inputs.aws_region }} --name ${{ inputs.cluster_name || inputs.environment }}
+        env:
+          # cluster_name fallback: caller may pass inputs.cluster_name; if not, we use environment as name
+          # Note: GitHub Actions does not support interpolation in env defaults from inputs directly — above syntax uses bash fallback
+          AWS_REGION: ${{ inputs.aws_region }}
+
+  deploy-to-eks:
+    name: Deploy to EKS (kubectl)
+    runs-on: ubuntu-latest
+    needs: configure-kube
+    if: ${{ (inputs.k8s_deployment != '') || (inputs.k8s_manifest_path != '') }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Ensure kubeconfig exists (sanity)
+        run: |
+          echo "Current context:"
+          kubectl config current-context
+
+      - name: Apply k8s manifests (if provided)
+        if: ${{ inputs.k8s_manifest_path != '' }}
+        run: |
+          # If manifests contain image placeholders, you may need to replace them before applying.
+          # Here we apply manifests directly (ensure image tags are present in manifests or use set image below).
+          kubectl apply -f ${{ inputs.k8s_manifest_path }}
+
+      - name: kubectl set image for deployment (if provided)
+        if: ${{ inputs.k8s_deployment != '' }}
+        run: |
+          IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}
+          ECR_URI=${{ needs.build-and-push.outputs.image_uri }}
+          CONTAINER_NAME="${{ inputs.k8s_container_name }}"
+          DEPLOYMENT="${{ inputs.k8s_deployment }}"
+          if [ -z "$CONTAINER_NAME" ] || [ "$CONTAINER_NAME" = "" ]; then
+            echo "k8s_container_name must be provided when using k8s_deployment"
+            exit 1
+          fi
+          kubectl set image deployment/${DEPLOYMENT} ${CONTAINER_NAME}=${ECR_URI}:${IMAGE_TAG} --record
+          kubectl rollout status deployment/${DEPLOYMENT} --timeout=120s || (kubectl rollout status deployment/${DEPLOYMENT} && exit 0)
+
+  terraform:
+    name: Terraform init/plan (and optional apply)
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: ${{ inputs.terraform_backend_key != '' || inputs.terraform_apply == true }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Configure AWS credentials for Terraform backend (if needed)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Terraform init
+        id: tf-init
+        run: |
+          if [ "${{ inputs.terraform_backend_key }}" != "" ]; then
+            terraform init -reconfigure \
+              -backend-config="key=${{ inputs.terraform_backend_key }}" \
+              -backend-config="bucket=YOUR_TF_STATE_BUCKET" \
+              -backend-config="region=${{ inputs.aws_region }}"
+          else
+            terraform init
+          fi
+
+      - name: Terraform workspace select/create
+        run: |
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+
+      - name: Terraform plan
+        id: tf-plan
+        run: |
+          terraform plan -out=tfplan.binary
+          terraform show -json tfplan.binary > tfplan.json
+
+      - name: Terraform apply (auto)
+        if: ${{ inputs.terraform_apply == true }}
+        run: |
+          terraform apply -auto-approve tfplan.binary
+
+  return-outputs:
+    name: Set final outputs
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    outputs:
+      image_uri: ${{ needs.build-and-push.outputs.image_uri }}
+      image_tag: ${{ needs.build-and-push.outputs.image_tag }}
+    steps:
+      - name: Set outputs (noop)
+        run: |
+          echo "image_uri=${{ needs.build-and-push.outputs.image_uri }}"
+          echo "image_tag=${{ needs.build-and-push.outputs.image_tag }}"
