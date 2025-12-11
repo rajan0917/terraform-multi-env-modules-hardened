@@ -1,0 +1,23 @@
+name: Deploy to QA
+on:
+  push:
+    branches:
+      - qa
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  call-reusable:
+    uses: ./.github/workflows/reusable-deploy.yml
+    with:
+      environment: qa
+      terraform_apply: true
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID_QA }}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY_QA }}
+      terraform_backend_key: "terraform/state/qa/terraform.tfstate"
+    secrets:
+      TF_VAR_sensitive: ${{ secrets.TF_VAR_SENSITIVE_QA }}
+    environment: qa
