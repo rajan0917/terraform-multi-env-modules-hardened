@@ -1,18 +1,9 @@
 name: Deploy to Dev
 on:
-#  push:
-#    branches:
-#      - dev
-#  workflow_dispatch:
-   workflow_dispatch:
-     branches:
-       - dev
-        inputs:
-      dry_run:
-        description: 'Run in dry mode (no deployments)'
-        type: boolean
-        required: true
-        default: true
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
 
 permissions:
   contents: read
