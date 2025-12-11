@@ -1,0 +1,16 @@
+name: Deploy to Prod
+on:
+  workflow_dispatch:
+
+jobs:
+  call-reusable:
+    uses: ./.github/workflows/reusable-deploy.yml
+    with:
+      environment: production
+      terraform_apply: true
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+      terraform_backend_key: "terraform/state/prod/terraform.tfstate"
+    secrets:
+      TF_VAR_sensitive: ${{ secrets.TF_VAR_SENSITIVE_PROD }}
+    environment: production
