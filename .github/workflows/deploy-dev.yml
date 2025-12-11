@@ -1,0 +1,32 @@
+name: Deploy to Dev
+on:
+#  push:
+#    branches:
+#      - dev
+#  workflow_dispatch:
+   workflow_dispatch:
+     branches:
+       - dev
+        inputs:
+      dry_run:
+        description: 'Run in dry mode (no deployments)'
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  call-reusable:
+    uses: ./.github/workflows/reusable-deploy.yml
+    with:
+      environment: dev
+      terraform_apply: true
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+      terraform_backend_key: "terraform/state/dev/terraform.tfstate"
+    secrets:
+      TF_VAR_sensitive: ${{ secrets.TF_VAR_SENSITIVE_DEV }}
+    environment: dev
