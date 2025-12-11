@@ -1,0 +1,23 @@
+name: Deploy to Test
+on:
+  push:
+    branches:
+      - test
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  call-reusable:
+    uses: ./.github/workflows/reusable-deploy.yml
+    with:
+      environment: test
+      terraform_apply: true
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID_TEST }}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}
+      terraform_backend_key: "terraform/state/test/terraform.tfstate"
+    secrets:
+      TF_VAR_sensitive: ${{ secrets.TF_VAR_SENSITIVE_TEST }}
+    environment: test
