@@ -1,0 +1,22 @@
+name: Deploy to dev
+on:
+  push:
+    branches: [ dev ]
+  workflow_dispatch:
+
+jobs:
+  call:
+    uses: ./.github/workflows/reusable-deploy.yml
+    with:
+      environment: dev
+      aws_account_id: "123456789012"
+      aws_region: "ap-south-1"
+      ecr_repository: "myapp"
+      image_name: "myapp"                 # optional
+      k8s_deployment: "myapp-deployment"  # or leave empty if you apply manifests
+      k8s_container_name: "myapp"         # required if k8s_deployment used
+      terraform_backend_key: "terraform/state/dev/terraform.tfstate"
+      terraform_apply: true
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
