@@ -1,0 +1,85 @@
+# .github/workflows/reusable-deploy.yml
+name: Reusable deploy workflow
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      terraform_apply:
+        required: false
+        type: boolean
+        default: false
+      aws_access_key_id:
+        required: true
+        type: string
+      aws_secret_access_key:
+        required: true
+        type: string
+      terraform_backend_key:
+        required: true
+        type: string
+    secrets:
+      TF_VAR_sensitive:        # optional example: passed through
+        required: false
+
+jobs:
+  checkout-and-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      tf_plan_path: ${{ steps.tf-plan.outputs.planfile }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Configure AWS credentials
+        env:
+          AWS_ACCESS_KEY_ID: ${{ inputs.aws_access_key_id }}
+          AWS_SECRET_ACCESS_KEY: ${{ inputs.aws_secret_access_key }}
+        run: |
+          echo "AWS credentials configured for ${INPUT_ENVIRONMENT}"
+      
+      - name: Terraform init
+        id: tf-init
+        run: |
+          terraform init -reconfigure \
+            -backend-config="key=${{ inputs.terraform_backend_key }}" \
+            -backend-config="bucket=my-terraform-state-bucket" \
+            -backend-config="region=ap-south-1"
+
+  terraform-plan:
+    needs: checkout-and-setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Terraform workspace/select
+        run: |
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+
+      - name: Terraform plan
+        id: tf-plan
+        run: |
+          terraform plan -out=tfplan.binary
+          terraform show -json tfplan.binary > tfplan.json
+        outputs:
+          planfile: tfplan.binary
+
+  terraform-apply:
+    needs: [checkout-and-setup, terraform-plan]
+    if: ${{ inputs.terraform_apply == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Terraform apply
+        run: |
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+          terraform apply -auto-approve tfplan.binary
