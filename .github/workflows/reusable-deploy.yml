@@ -6,6 +6,10 @@ on:
       environment:
         required: true
         type: string
+      dry_run:
+        required: false
+        type: boolean
+        default: false
       terraform_apply:
         required: false
         type: boolean
