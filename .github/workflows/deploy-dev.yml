@@ -1,9 +1,22 @@
 name: Deploy to Dev
 on:
-  push:
-    branches:
-      - dev
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (no changes applied)"
+        type: boolean
+        default: true
+
+jobs:
+  deploy-dev:
+    # HARD BLOCK: only dev branch allowed
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    
+#  push:
+#    branches:
+#      - dev
+#  workflow_dispatch:
 
 permissions:
   contents: read
