@@ -1,9 +1,9 @@
 terraform {
   backend "s3" {
-    bucket         = "tf-state-yourbucket-test"
-    key            = "test/terraform.tfstate"
-    region         = var.region
-    dynamodb_table = "tf-locks-test"
+    bucket         = "tf-state-mybucket-dev"
+    key            = "dev/terraform.tfstate"
+    region         = "ap-south-1"
+    use_lockfile   = false
     encrypt        = true
   }
 }
