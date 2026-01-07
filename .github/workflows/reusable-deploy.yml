@@ -73,8 +73,8 @@ jobs:
         run: |
           terraform plan -out=tfplan.binary
           terraform show -json tfplan.binary > tfplan.json
-        outputs:
-          planfile: tfplan.binary
+#        outputs:
+#          planfile: tfplan.binary
 
 #  terraform-apply:
 #    needs: [checkout-and-setup, terraform-plan]
