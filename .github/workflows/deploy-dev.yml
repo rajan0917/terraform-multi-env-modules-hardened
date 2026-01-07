@@ -1,29 +1,20 @@
-name: Deploy to Dev
+name: Deploy Dev Environment
+
 on:
-#  push:
+  push:
     branches:
       - dev
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Run in dry mode (no deployments)'
-        type: boolean
-        required: true
-        default: true
-        
+  
 permissions:
-  contents: read
-  id-token: write
-
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+  
 jobs:
-  call-reusable:
-    uses: ./.github/workflows/reusable-deploy.yml
+  deploy-dev:
+    uses: ./.github/workflows/terraform-reusable.yml
     with:
       environment: dev
-      terraform_apply: true
-      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
-      aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
-      terraform_backend_key: "terraform/state/dev/terraform.tfstate"
-    secrets:
-      TF_VAR_sensitive: ${{ secrets.TF_VAR_SENSITIVE_DEV }}
-    environment: dev
+      aws_region: ap-south-1
+      terraform_directory: envs/dev
+      dry_run: true
