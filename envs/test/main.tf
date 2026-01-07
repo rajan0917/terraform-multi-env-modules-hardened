@@ -37,10 +37,10 @@ module "rds" {
 }
 module "eks" {
   source            = "../../modules/eks"
-  cluster_name      = "test-eks"
-  subnet_ids        = []
-  create_node_group = true
-  tags              = var.tags
+#  cluster_name      = "test-eks"
+#  subnet_ids        = []
+#  create_node_group = true
+#  tags              = var.tags
 }
 module "alb" {
   source             = "../../modules/alb"
