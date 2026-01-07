@@ -51,7 +51,7 @@ jobs:
         if: ${{ inputs.dry_run }}
         working-directory: ${{ inputs.terraform_directory }}
 #        run: terraform plan -input=false -no-color
-        run: terraform plan -lock=false -var-file="terraform.tfvars.example"
+        run: terraform plan -lock=false -var-file="terraform.tfvars"
 
 #      - name: Terraform Apply
 #        if: ${{ !inputs.dry_run }}
