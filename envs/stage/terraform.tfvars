@@ -1,3 +1,5 @@
-env = "stage"
-region = "us-east-1"
-tags = { Environment = "stage" Team = "platform" }
+env = "prod"
+region = "ap-south-1"
+tags = { Environment = "stage" 
+                Team = "platform" 
+}
