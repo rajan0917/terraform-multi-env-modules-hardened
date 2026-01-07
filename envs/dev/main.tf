@@ -38,11 +38,11 @@ module "rds" {
 }
 module "eks" {
   source            = "../../modules/eks"
-  cluster_name      = "dev-eks"
+#  cluster_name      = "dev-eks"
 #  subnet_ids        = []
-  subnet_ids        = ["subnet-aaa","subnet-bbb"]
-  create_node_group = true
-  tags              = var.tags
+#  subnet_ids        = ["subnet-aaa","subnet-bbb"]
+#  create_node_group = true
+#  tags              = var.tags
 }
 module "alb" {
   source             = "../../modules/alb"
