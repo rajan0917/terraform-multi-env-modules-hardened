@@ -17,6 +17,4 @@ jobs:
       k8s_container_name: "myapp"         # required if k8s_deployment used
       terraform_backend_key: "terraform/state/dev/terraform.tfstate"
       terraform_apply: true
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+
