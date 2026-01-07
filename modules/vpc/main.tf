@@ -31,5 +31,5 @@ resource "aws_eip" "nat" {
 #  count = var.create_nat
 #  vpc   = true
   count  = 3
-  domain   = "vpc"
+#  domain   = "vpc"
 }
