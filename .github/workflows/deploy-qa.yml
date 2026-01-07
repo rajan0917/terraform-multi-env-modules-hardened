@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   deploy-dev:
-    uses: ./.github/workflows/terraform-reusable.yml
+    uses: ./.github/workflows/reusable-deploy.yml
     with:
       environment: qa
       aws_region: ap-south-1
