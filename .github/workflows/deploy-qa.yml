@@ -10,14 +10,10 @@ permissions:
   id-token: write
 
 jobs:
-  call-reusable:
-    uses: ./.github/workflows/reusable-deploy.yml
+  deploy-dev:
+    uses: ./.github/workflows/terraform-reusable.yml
     with:
       environment: qa
-      terraform_apply: true
-      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID_QA }}
-      aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY_QA }}
-      terraform_backend_key: "terraform/state/qa/terraform.tfstate"
-    secrets:
-      TF_VAR_sensitive: ${{ secrets.TF_VAR_SENSITIVE_QA }}
-    environment: qa
+      aws_region: ap-south-1
+      terraform_directory: envs/qa
+      dry_run: true
