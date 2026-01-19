@@ -79,3 +79,17 @@ module "nlb" {
   vpc_id  = module.vpc.vpc_id
   tags    = var.tags
 }
+module "cloudfront" {
+  source = "../../modules/cloudfront"
+
+  name               = "${var.env}-cdn"
+  origin_type        = "s3"
+  origin_domain_name = module.s3.primary_bucket_domain_name
+  origin_id          = "s3-origin"
+
+  acm_certificate_arn = var.acm_cert_arn
+  aliases             = ["cdn.example.com"]
+  waf_acl_arn         = module.waf.waf_acl_arn
+
+  tags = var.tags
+}
